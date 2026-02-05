@@ -30,7 +30,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      final token = await TokenStorage.getToken();      
+      final token = await TokenStorage.getAccessToken();      
       if (!mounted) return;
 
       setState(() {
