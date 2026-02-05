@@ -1,3 +1,5 @@
+import 'package:eios/presentation/screens/semestr_screen.dart';
+import 'package:eios/presentation/screens/timetable_screen.dart';
 import 'package:flutter/material.dart';
 import 'main_screen.dart';
 import 'profile_screen.dart';
@@ -14,8 +16,9 @@ class _TabsScreenState extends State<TabsScreen> {
 
   final List<Widget> _screens = [
     const MainScreen(),
-    const Center(child: Text("Экран поиска")),
+    const TimeTableScreen(),
     const ProfileScreen(),
+    const SemestrScreen(),
   ];
 
   @override
@@ -30,8 +33,9 @@ class _TabsScreenState extends State<TabsScreen> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Поиск'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Расписание'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Профиль'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Успеваемость'),
         ],
       ),
     );

@@ -1,7 +1,7 @@
+import 'package:eios/presentation/screens/tabs_screen.dart';
 import 'package:flutter/material.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/storage/token_storage.dart';
-import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _checkToken() async {
-    final token = await TokenStorage.getToken();
+    final token = await TokenStorage.getAccessToken();
     if (token != null && token.isNotEmpty) {
       _navigateToMain();
     }
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateToMain() {
     Navigator.pushReplacement(
       context, 
-      MaterialPageRoute(builder: (context) => const MainScreen())
+      MaterialPageRoute(builder: (context) => const TabsScreen())
     );
   }
 
