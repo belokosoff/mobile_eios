@@ -1,40 +1,9 @@
-import 'dart:collection';
-import 'dart:developer';
-
 import 'package:eios/data/models/student_time_table.dart';
 import 'package:eios/data/models/time_table_lesson_discipline.dart';
 import 'package:eios/data/repositories/timetable_repository.dart';
+import 'package:eios/presentation/screens/rating_plan_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-
-class Event {
-  final String title;
-
-  const Event(this.title);
-
-  @override
-  String toString() => title;
-}
-
-final kEvents = LinkedHashMap<DateTime, List<Event>>(
-  equals: isSameDay,
-  hashCode: getHashCode,
-)..addAll(_kEventSource);
-
-final _kEventSource =
-    {
-      for (var item in List.generate(50, (index) => index))
-        DateTime.utc(kFirstDay.year, kFirstDay.month, item * 5): List.generate(
-          item % 4 + 1,
-          (index) => Event('Event $item | ${index + 1}'),
-        ),
-    }..addAll({
-      kToday: [const Event("Today's Event 1"), const Event("Today's Event 2")],
-    });
-
-int getHashCode(DateTime key) {
-  return key.day * 1000000 + key.month * 10000 + key.year;
-}
 
 List<DateTime> daysInRange(DateTime first, DateTime last) {
   final dayCount = last.difference(first).inDays + 1;
@@ -56,10 +25,33 @@ class TimeTableScreen extends StatefulWidget {
 }
 
 class _TimeTableScreenState extends State<TimeTableScreen> {
+  final List<String> _months = [
+    'января',
+    'февраля',
+    'марта',
+    'апреля',
+    'мая',
+    'июня',
+    'июля',
+    'августа',
+    'сентября',
+    'октября',
+    'ноября',
+    'декабря',
+  ];
+  final List<String> _periodLesson = [
+    '8:00 - 9:30',
+    '9:45 - 11:15',
+    '11:35 - 13:05',
+    '13:20 - 14:50',
+    '15:00 - 16:30',
+    '16:40 - 18:10',
+    '18:15 - 19:45',
+    '19:50-21:20',
+  ];
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-
   List<StudentTimeTable>? _timetableData;
   bool _isLoading = false;
 
@@ -119,38 +111,22 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
     return lessonsList;
   }
 
-  List<TimeTableLessonDiscipline> _getDisciplines() {
-    final disciplines = <TimeTableLessonDiscipline>[];
-    if (_timetableData != null) {
-      for (final tt in _timetableData!) {
-        final timeTable = tt.timeTable;
-        if (timeTable?.lessons != null) {
-          for (final lesson in timeTable!.lessons!) {
-            if (lesson.disciplines != null) {
-              disciplines.addAll(lesson.disciplines!);
-            }
-          }
-        }
-      }
-    }
-    return disciplines;
-  }
-
   @override
   Widget build(BuildContext context) {
     final selectedDate = _selectedDay ?? _focusedDay;
     final lessonItems = _getFormattedLessons();
-    final disciplines = _getDisciplines();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Расписание')),
       body: Column(
         children: [
           TableCalendar(
+            locale: 'ru_RU',
             firstDay: kFirstDay,
             lastDay: kLastDay,
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
+            startingDayOfWeek: StartingDayOfWeek.monday,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selectedDay, focusedDay) {
               if (!isSameDay(_selectedDay, selectedDay)) {
@@ -160,8 +136,6 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                 });
                 _loadTimetable(selectedDay);
               }
-
-              log('Выбрана дата: ${selectedDay.toString()}');
             },
             onFormatChanged: (format) {
               setState(() {
@@ -176,8 +150,8 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Расписание на ${selectedDate.day}.${selectedDate.month}.${selectedDate.year}",
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              "Расписание на ${selectedDate.day} ${_months[selectedDate.month - 1]} ${selectedDate.year}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
           const Divider(),
@@ -203,87 +177,158 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                             return Card(
                               elevation: 2,
                               margin: const EdgeInsets.symmetric(vertical: 6),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
-                                  child: Text(
-                                    "$number", // Номер пары
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                              child: InkWell(
+                                onTap: () async {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+
+                                  try {
+                                    final ratingPlan = await _repository
+                                        .getRatingPlan(d.id!);
+
+                                    if (mounted) {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              RatingPlanScreen(
+                                                plan: ratingPlan,
+                                                disciplineTitle:
+                                                    d.title ?? "Дисциплина",
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Не удалось загрузить план: $e",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).primaryColor,
+                                    child: Text(
+                                      "$number",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                title: Text(
-                                  d.title ?? '—',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  title: Text(
+                                    d.title ?? '—',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.person,
-                                            size: 16,
-                                            color: Colors.grey,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              d.teacher?.fio ??
-                                                  'Преподаватель не указан',
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.watch_later_outlined,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                (number > 0 &&
+                                                        number <=
+                                                            _periodLesson
+                                                                .length)
+                                                    ? _periodLesson[number - 1]
+                                                    : "Время не указано",
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.person,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                d.teacher?.fio ??
+                                                    'Преподаватель не указан',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.location_on,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Ауд. ${d.auditorium?.number ?? '—'} (Корпус ${d.auditorium?.campusTitle ?? '—'})',
                                               style: const TextStyle(
                                                 fontSize: 13,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.location_on,
-                                            size: 16,
-                                            color: Colors.grey,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Ауд. ${d.auditorium?.number ?? '—'} (Корпус ${d.auditorium?.campusTitle ?? '—'})',
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                trailing: d.teacher?.photo?.urlSmall != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: Image.network(
-                                          d.teacher!.photo!.urlSmall!,
-                                          width: 40,
-                                          height: 40,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  const Icon(
-                                                    Icons.account_box,
-                                                    size: 40,
-                                                  ),
+                                          ],
                                         ),
-                                      )
-                                    : null,
+                                      ],
+                                    ),
+                                  ),
+                                  trailing: d.teacher?.photo?.urlSmall != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          child: Image.network(
+                                            d.teacher!.photo!.urlSmall!,
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const Icon(
+                                                      Icons.account_box,
+                                                      size: 40,
+                                                    ),
+                                          ),
+                                        )
+                                      : null,
+                                ),
                               ),
                             );
                           },

@@ -1,9 +1,16 @@
 import 'package:eios/presentation/screens/tabs_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widget_previews.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/storage/token_storage.dart';
 
 class LoginScreen extends StatefulWidget {
+  @Preview(
+    name: "123",
+    textScaleFactor: 1.0,
+    brightness: Brightness.dark
+  )
+  
   const LoginScreen({super.key});
   @override
   // ignore: library_private_types_in_public_api
@@ -59,8 +66,15 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: _emailController, decoration: const InputDecoration(labelText: "Email")),
-            TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Пароль")),
+            SizedBox(
+              width: 250,
+              child: TextField(controller: _emailController, decoration: const InputDecoration(border: OutlineInputBorder(), labelText: "Email")),
+            ),
+            Padding(padding: const EdgeInsets.all(12.0)),
+            SizedBox(
+              width: 250,
+              child: TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(border: OutlineInputBorder(), labelText: "Пароль")),
+            ),
             const SizedBox(height: 20),
             if (_errorMessage.isNotEmpty) 
               Text(_errorMessage, style: const TextStyle(color: Colors.red)),
