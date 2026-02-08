@@ -45,10 +45,7 @@ class BrsRepository {
     try {
       final response = await _dio.get(
         '/v1/StudentSemester',
-        queryParameters: {
-          'year': year,
-          'period': period,
-        },
+        queryParameters: {'year': year, 'period': period},
       );
       return StudentSemestrWithDisciplines.fromJson(response.data);
     } catch (e) {
@@ -56,24 +53,27 @@ class BrsRepository {
     }
   }
 
-  Future<AcceptedAttendance> sendStudentAttendanceCode ({ required String code }) async {
+  Future<AcceptedAttendance> sendStudentAttendanceCode({
+    required String code,
+  }) async {
     try {
-      final response = await _dio.post('/v1/StudentAttendanceCode', queryParameters: {'code': code},);
+      final response = await _dio.post(
+        '/v1/StudentAttendanceCode',
+        queryParameters: {'code': code},
+      );
       return AcceptedAttendance.fromJson(response.data);
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<List<Message>> getMessages({
-    required int disciplineId,
-  }) async {
+  Future<List<Message>> getMessages({required int disciplineId}) async {
     try {
       final response = await _dio.get(
         '/v1/ForumMessage',
         queryParameters: {'disciplineId': disciplineId},
       );
-      
+
       if (response.data is List) {
         return (response.data as List)
             .map((e) => Message.fromJson(e as Map<String, dynamic>))
@@ -94,13 +94,15 @@ class BrsRepository {
   }) async {
     try {
       final response = await _dio.post(
-        '/v1/ForumMessage',
+        '/v1/ForumMessage/',
+        queryParameters: {
+          'disciplineId': disciplineId
+        },
         data: {
-          'disciplineId': disciplineId,
           'text': messageText,
         },
       );
-      
+
       return Message.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -109,15 +111,13 @@ class BrsRepository {
     }
   }
 
-  Future<void> deleteMessage({
-    required int id,
-  }) async {
+  Future<void> deleteMessage({required int id}) async {
     try {
       final response = await _dio.delete(
         '/v1/ForumMessage',
         queryParameters: {'id': id},
       );
-      
+
       // 204 - успешное удаление
       if (response.statusCode == 204) {
         return;
@@ -131,28 +131,22 @@ class BrsRepository {
 
   AppException _handleError(DioException error) {
     final statusCode = error.response?.statusCode;
-    final message = error.response?.data?['message'] ?? 
-                    error.response?.data?.toString() ?? 
-                    error.message;
+    final message =
+        error.response?.data?['message'] ??
+        error.response?.data?.toString() ??
+        error.message;
 
     switch (statusCode) {
       case 400:
         return BadRequestException(
-          message ?? 'Сообщение не должно быть пустым'
+          message ?? 'Сообщение не должно быть пустым',
         );
       case 403:
-        return ForbiddenException(
-          message ?? 'У вас нет доступа к дисциплине'
-        );
+        return ForbiddenException(message ?? 'У вас нет доступа к дисциплине');
       case 404:
-        return NotFoundException(
-          message ?? 'Ресурс не найден'
-        );
+        return NotFoundException(message ?? 'Ресурс не найден');
       default:
-        return AppException(
-          message ?? 'Произошла ошибка',
-          statusCode,
-        );
+        return AppException(message ?? 'Произошла ошибка', statusCode);
     }
   }
 }

@@ -1,14 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:eios/core/network/access_token.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../storage/token_storage.dart';
 import 'dart:developer';
 
 class AuthRepository {
-  // Используем тот же конфиг, что и в ApiClient для единообразия
   final Dio _dio = Dio(BaseOptions(
     baseUrl: 'https://p.mrsu.ru/',
     connectTimeout: const Duration(seconds: 15),
-    contentType: Headers.formUrlEncodedContentType, // Указываем по умолчанию
+    contentType: Headers.formUrlEncodedContentType,
   ));
 
   Future<bool> login(String username, String password) async {
@@ -19,13 +19,12 @@ class AuthRepository {
           'username': username,
           'password': password,
           'grant_type': 'password',
-          'client_id': '8',
-          'client_secret': 'qweasd',
+          'client_id': dotenv.env["CLIENT_ID"],
+          'client_secret': dotenv.env["CLIENT_SECRET"],
         },
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        // Парсим JSON в модель AccessToken
         final tokens = AccessToken.fromJson(response.data);
         
         // Сохраняем весь объект (access и refresh)

@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import '../../data/storage/token_storage.dart';
 import 'access_token.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,41 +23,51 @@ class ApiClient {
       ),
     );
 
-    dio.interceptors.add(QueuedInterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await TokenStorage.getAccessToken();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onError: (DioException e, handler) async {
-        if (e.response?.statusCode == 401 && !e.requestOptions.path.contains('OAuth/Token')) {
-          final refreshToken = await TokenStorage.getRefreshToken();
+    dio.interceptors.add(
+      QueuedInterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await TokenStorage.getAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (DioException e, handler) async {
+          if (e.response?.statusCode == 401 &&
+              !e.requestOptions.path.contains('OAuth/Token')) {
+            final refreshToken = await TokenStorage.getRefreshToken();
 
-          if (refreshToken != null) {
-            try {
-              log("LOG: Токен истек, пытаюсь обновить...");
-              final newTokens = await _refreshTokens(refreshToken);
-              await TokenStorage.saveTokens(newTokens);
+            if (refreshToken != null) {
+              try {
+                log("LOG: Токен истек, пытаюсь обновить...");
+                final newTokens = await _refreshTokens(refreshToken);
+                await TokenStorage.saveTokens(newTokens);
 
-              final options = e.requestOptions;
-              options.headers['Authorization'] = 'Bearer ${newTokens.accessToken}';
-              
-              final response = await dio.fetch(options);
-              return handler.resolve(response);
-            } catch (err) {
-              log("LOG: Ошибка обновления токена, выход из системы");
-              await TokenStorage.logout();
-              return handler.next(e);
+                final options = e.requestOptions;
+                options.headers['Authorization'] =
+                    'Bearer ${newTokens.accessToken}';
+
+                final response = await dio.fetch(options);
+                return handler.resolve(response);
+              } catch (err) {
+                log("LOG: Ошибка обновления токена, выход из системы");
+                await TokenStorage.logout();
+                return handler.next(e);
+              }
             }
           }
-        }
-        return handler.next(e);
-      },
-    ));
+          return handler.next(e);
+        },
+      ),
+    );
 
-    dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (obj) => debugPrint(obj.toString()),
+      ),
+    );
   }
 
   Future<void> login(String username, String password) async {
@@ -77,13 +88,13 @@ class ApiClient {
   }
 
   Future<AccessToken> _refreshTokens(String refreshToken) async {
-    final refreshDio = Dio(); 
+    final refreshDio = Dio();
     final response = await refreshDio.post(
       '$baseUrl/OAuth/Token',
       data: {
         'grant_type': 'refresh_token',
         'refresh_token': refreshToken,
-        'client_id': dotenv.env["CLIENT_ID"], 
+        'client_id': dotenv.env["CLIENT_ID"],
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );

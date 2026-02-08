@@ -1,3 +1,4 @@
+import 'package:eios/data/repositories/user_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:eios/data/repositories/brs_repository.dart';
 import 'package:eios/data/models/message.dart';
@@ -24,12 +25,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final BrsRepository _repository = BrsRepository();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
-  
+
   List<Message> _messages = [];
   bool _isLoading = false;
   bool _isSending = false;
   String? _errorMessage;
-  int _currentUserId = 0;
   @override
   void initState() {
     super.initState();
@@ -44,15 +44,46 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.dispose();
   }
 
-  // Загружаем ID текущего пользователя
+  dynamic _currentUserId;
+  bool _isIdLoading = true;
+
   Future<void> _loadCurrentUserId() async {
+    setState(() => _isIdLoading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      String? savedId = prefs.getString('user_id');
+      debugPrint('DEBUG: Из SharedPreferences получено: "$savedId"');
+
+      if (savedId == null || savedId == "0" || savedId.isEmpty) {
+        debugPrint(
+          'DEBUG: ID отсутствует или равен "0", запрашиваю профиль...',
+        );
+
+        final userRepository = UserRepository();
+        final profile = await userRepository.getUserProfile();
+
+        savedId = profile.id;
+
+        debugPrint('DEBUG: Профиль получен. ID из профиля: "$savedId"');
+
+        if (savedId != null && savedId != "0") {
+          await prefs.setString('user_id', savedId);
+          debugPrint('DEBUG: Новый ID успешно записан в SharedPreferences');
+        }
+      }
+
       setState(() {
-        _currentUserId = prefs.getInt('user_id') ?? 0;
+        _currentUserId = savedId;
+        _isIdLoading = false;
       });
+
+      debugPrint(
+        'DEBUG: Итоговый _currentUserId в состоянии: "$_currentUserId"',
+      );
     } catch (e) {
-      debugPrint('Error loading current user id: $e');
+      debugPrint('DEBUG: ОШИБКА в _loadCurrentUserId: $e');
+      setState(() => _isIdLoading = false);
     }
   }
 
@@ -66,8 +97,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final messages = await _repository.getMessages(
         disciplineId: widget.disciplineId,
       );
-      
-      // Сортируем сообщения по дате (опционально)
+
       messages.sort((a, b) {
         if (a.createDate == null || b.createDate == null) return 0;
         try {
@@ -78,12 +108,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
           return 0;
         }
       });
-      
+
       setState(() {
         _messages = messages;
         _isLoading = false;
       });
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
@@ -125,7 +155,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         disciplineId: widget.disciplineId,
         messageText: text,
       );
-      
+
       _messageController.clear();
       await _loadMessages();
     } on BadRequestException {
@@ -147,11 +177,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Future<void> _deleteMessage(int? messageId) async {
     if (messageId == null) return;
-    
+
     try {
       await _repository.deleteMessage(id: messageId);
       await _loadMessages();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -173,7 +203,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -199,7 +229,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   void _showDeleteDialog(int? messageId) {
     if (messageId == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -215,9 +245,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               Navigator.of(context).pop();
               _deleteMessage(messageId);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Удалить'),
           ),
         ],
@@ -235,9 +263,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
             const Text('Форум'),
             Text(
               widget.disciplineName,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white70,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.white70),
             ),
           ],
         ),
@@ -252,9 +280,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         onRefresh: _loadMessages,
         child: Column(
           children: [
-            Expanded(
-              child: _buildContent(),
-            ),
+            Expanded(child: _buildContent()),
             MessageInput(
               controller: _messageController,
               onSend: _sendMessage,
@@ -267,10 +293,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+    if (_isLoading || _isIdLoading) {
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -280,23 +304,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red[400],
-              ),
+              Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
               const SizedBox(height: 16),
-              Text(
-                'Ошибка',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('Ошибка', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -315,24 +332,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.forum_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.forum_outlined, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Нет сообщений',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               'Будьте первым, кто напишет',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
             ),
           ],
         ),

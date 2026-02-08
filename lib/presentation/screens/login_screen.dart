@@ -1,9 +1,10 @@
+import 'package:eios/data/repositories/user_repository.dart';
 import 'package:eios/presentation/screens/tabs_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/storage/token_storage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LoginScreen extends StatefulWidget {
   @Preview(
@@ -38,14 +39,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() async {
-    final success = await _authRepo.login(
-      _emailController.text, 
-      _passwordController.text
-    );
+  final success = await _authRepo.login(
+    _emailController.text, 
+    _passwordController.text
+  );
 
-    if (success) {
-      _navigateToMain();
-    } else {
+  if (success) {
+    try {
+      final userRepository = UserRepository();
+      final userModel = await userRepository.getUserProfile();
+
+      final prefs = await SharedPreferences.getInstance();
+      
+      if (userModel.id != null) {
+        await prefs.setString('user_id', userModel.id!);
+        debugPrint('Успешно сохранили мой ID: ${userModel.id}');
+      }
+    } catch (e) {
+      debugPrint('Не удалось получить ID пользователя: $e');
+    }
+
+    _navigateToMain();
+  } else {
       setState(() {
         _errorMessage = "Неверный логин или пароль";
       });
