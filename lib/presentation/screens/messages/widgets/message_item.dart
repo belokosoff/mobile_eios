@@ -1,11 +1,10 @@
-// lib/presentation/screens/messages/widgets/message_item.dart
 import 'package:flutter/material.dart';
 import 'package:eios/data/models/message.dart';
 import 'package:intl/intl.dart';
 
 class MessageItem extends StatelessWidget {
   final Message message;
-  final int currentUserId;
+  final dynamic currentUserId;
   final VoidCallback? onDelete;
 
   const MessageItem({
@@ -17,9 +16,9 @@ class MessageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMyMessage = message.user?.id == currentUserId;
+    final isMyMessage = currentUserId.toString() == message.user?.id.toString();
     final isTeacher = message.isTeacher ?? false;
-    
+
     DateTime? messageDate;
     try {
       if (message.createDate != null) {
@@ -28,12 +27,12 @@ class MessageItem extends StatelessWidget {
     } catch (e) {
       debugPrint('Error parsing date: ${message.createDate}');
     }
-    
+
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
 
     final photoUrl = message.user?.photo?.urlMedium;
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
-
+    debugPrint('My ID: $currentUserId, Message User ID: ${message.user?.id}');
     return Align(
       alignment: isMyMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -47,19 +46,19 @@ class MessageItem extends StatelessWidget {
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
-              bottomLeft: isMyMessage 
-                  ? const Radius.circular(16) 
+              bottomLeft: isMyMessage
+                  ? const Radius.circular(16)
                   : const Radius.circular(4),
-              bottomRight: isMyMessage 
+              bottomRight: isMyMessage
                   ? const Radius.circular(4)
                   : const Radius.circular(16),
             ),
           ),
-          color: isMyMessage 
+          color: isMyMessage
               ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : isTeacher 
-                  ? Colors.orange[50]
-                  : Colors.grey[100],
+              : isTeacher
+              ? Colors.orange[50]
+              : Colors.grey[100],
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onLongPress: isMyMessage ? onDelete : null,
@@ -76,8 +75,8 @@ class MessageItem extends StatelessWidget {
                         backgroundColor: isTeacher
                             ? Colors.orange
                             : isMyMessage
-                                ? Theme.of(context).primaryColor
-                                : Colors.grey[600],
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey[600],
                         backgroundImage: hasPhoto
                             ? NetworkImage(photoUrl)
                             : null,
@@ -144,23 +143,20 @@ class MessageItem extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (isMyMessage && onDelete != null)
+                      if (isMyMessage)
                         IconButton(
                           icon: const Icon(Icons.delete_outline),
                           iconSize: 20,
                           color: Colors.red[400],
-                          onPressed: onDelete,
-                          tooltip: 'Удалить сообщение',
+                          onPressed:
+                              onDelete,
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                     message.text ?? '',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                    ),
+                    style: const TextStyle(fontSize: 15, height: 1.4),
                   ),
                 ],
               ),
@@ -173,7 +169,7 @@ class MessageItem extends StatelessWidget {
 
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return 'U';
-    
+
     final words = name.trim().split(' ');
     if (words.length >= 2) {
       return '${words[0][0]}${words[1][0]}'.toUpperCase();
