@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import '../../data/storage/token_storage.dart';
 import 'access_token.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiClient {
   ApiClient._internal();
@@ -65,8 +66,8 @@ class ApiClient {
         'username': username,
         'password': password,
         'grant_type': 'password',
-        'client_id': '8',
-        'client_secret': 'qweasd'
+        'client_id': dotenv.env["CLIENT_ID"],
+        'client_secret': dotenv.env["CLIENT_SECRET"],
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
@@ -82,7 +83,7 @@ class ApiClient {
       data: {
         'grant_type': 'refresh_token',
         'refresh_token': refreshToken,
-        'client_id': '8', 
+        'client_id': dotenv.env["CLIENT_ID"], 
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );

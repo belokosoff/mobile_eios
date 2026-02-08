@@ -22,7 +22,6 @@ class RatingPlanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Проверяем наличие разделов
     final hasSections = plan.sections != null && plan.sections!.isNotEmpty;
     final hasZeroSession = plan.markZeroSession != null;
     final hasContent = hasSections || hasZeroSession;

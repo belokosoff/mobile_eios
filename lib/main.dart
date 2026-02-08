@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'data/storage/token_storage.dart';
 import 'presentation/screens/login_screen.dart';
@@ -6,9 +7,10 @@ import 'presentation/screens/tabs_screen.dart';
 import 'core/network/api_service.dart';
 
 void main() async {
-WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   ApiClient().init();
-    initializeDateFormatting().then((_) => runApp(MyApp()));
+  initializeDateFormatting().then((_) => runApp(MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -31,7 +33,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      final token = await TokenStorage.getAccessToken();      
+      final token = await TokenStorage.getAccessToken();
       if (!mounted) return;
 
       setState(() {
@@ -53,10 +55,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'EIOS App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: _initialScreen,
     );
   }
