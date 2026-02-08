@@ -88,7 +88,6 @@ class BrsRepository {
     }
   }
 
-  // POST Messages с обработкой ошибок
   Future<Message> sendMessage({
     required int disciplineId,
     required String messageText,
@@ -110,7 +109,6 @@ class BrsRepository {
     }
   }
 
-  // DELETE Messages с обработкой ошибок
   Future<void> deleteMessage({
     required int id,
   }) async {
@@ -131,7 +129,6 @@ class BrsRepository {
     }
   }
 
-  // Централизованная обработка ошибок
   AppException _handleError(DioException error) {
     final statusCode = error.response?.statusCode;
     final message = error.response?.data?['message'] ?? 
