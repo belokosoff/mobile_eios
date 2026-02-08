@@ -30,7 +30,6 @@ class ApiClient {
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
-        // Если ошибка 401 и это не попытка логина
         if (e.response?.statusCode == 401 && !e.requestOptions.path.contains('OAuth/Token')) {
           final refreshToken = await TokenStorage.getRefreshToken();
 
@@ -40,7 +39,6 @@ class ApiClient {
               final newTokens = await _refreshTokens(refreshToken);
               await TokenStorage.saveTokens(newTokens);
 
-              // Повторяем запрос с новым токеном
               final options = e.requestOptions;
               options.headers['Authorization'] = 'Bearer ${newTokens.accessToken}';
               
@@ -77,7 +75,6 @@ class ApiClient {
     await TokenStorage.saveTokens(tokens);
   }
 
-  // Внутренний метод обновления
   Future<AccessToken> _refreshTokens(String refreshToken) async {
     final refreshDio = Dio(); 
     final response = await refreshDio.post(

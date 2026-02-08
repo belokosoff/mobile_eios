@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'data/storage/token_storage.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/tabs_screen.dart';
@@ -7,7 +8,7 @@ import 'core/network/api_service.dart';
 void main() async {
 WidgetsFlutterBinding.ensureInitialized();
   ApiClient().init();
-  runApp(const MyApp());
+    initializeDateFormatting().then((_) => runApp(MyApp()));
 }
 
 class MyApp extends StatefulWidget {

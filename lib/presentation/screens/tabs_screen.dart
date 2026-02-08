@@ -1,7 +1,7 @@
-import 'package:eios/presentation/screens/semestr_screen.dart';
+import 'package:eios/presentation/screens/attendance_code_screen.dart';
+import 'package:eios/presentation/screens/discipline_screen.dart';
 import 'package:eios/presentation/screens/timetable_screen.dart';
 import 'package:flutter/material.dart';
-import 'main_screen.dart';
 import 'profile_screen.dart';
 
 class TabsScreen extends StatefulWidget {
@@ -14,28 +14,45 @@ class TabsScreen extends StatefulWidget {
 class _TabsScreenState extends State<TabsScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const MainScreen(),
-    const TimeTableScreen(),
-    const ProfileScreen(),
-    const SemestrScreen(),
-  ];
+  static const int _scannerTabIndex = 3;
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: [
+          const TimeTableScreen(),
+          const ProfileScreen(),
+          const DisciplineListScreen(),
+          AttendanceCodeScreen(isActive: _currentIndex == _scannerTabIndex),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Расписание'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Профиль'),
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Успеваемость'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month),
+            label: 'Расписание',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Профиль',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Успеваемость',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.qr_code_scanner),
+            label: 'Посещаемость',
+          ),
         ],
       ),
     );
