@@ -2,6 +2,8 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../data/storage/token_storage.dart';
+import '../../presentation/screens/login_screen.dart';
+import '../navigation/navigator_key.dart'; // <-- добавили
 import 'access_token.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -12,6 +14,8 @@ class ApiClient {
 
   late Dio dio;
   final String baseUrl = 'https://papi.mrsu.ru';
+
+  bool _isLoggingOut = false;
 
   void init() {
     dio = Dio(
@@ -37,11 +41,12 @@ class ApiClient {
               !e.requestOptions.path.contains('OAuth/Token')) {
             final refreshToken = await TokenStorage.getRefreshToken();
 
-            if (refreshToken != null) {
+            if (refreshToken != null && refreshToken.isNotEmpty) {
               try {
-                log("LOG: Токен истек, пытаюсь обновить...");
+                log("LOG: Токен истёк, пытаюсь обновить...");
                 final newTokens = await _refreshTokens(refreshToken);
                 await TokenStorage.saveTokens(newTokens);
+                log("LOG: Токен успешно обновлён");
 
                 final options = e.requestOptions;
                 options.headers['Authorization'] =
@@ -49,11 +54,15 @@ class ApiClient {
 
                 final response = await dio.fetch(options);
                 return handler.resolve(response);
-              } catch (err) {
-                log("LOG: Ошибка обновления токена, выход из системы");
-                await TokenStorage.logout();
+              } catch (refreshError) {
+                log("LOG: Не удалось обновить токен: $refreshError");
+                await _forceLogout();
                 return handler.next(e);
               }
+            } else {
+              log("LOG: Refresh token отсутствует");
+              await _forceLogout();
+              return handler.next(e);
             }
           }
           return handler.next(e);
@@ -68,6 +77,26 @@ class ApiClient {
         logPrint: (obj) => debugPrint(obj.toString()),
       ),
     );
+  }
+
+  Future<void> _forceLogout() async {
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+
+    await TokenStorage.logout();
+
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false, // удаляем весь стек
+      );
+    }
+
+
+    Future.delayed(const Duration(seconds: 2), () {
+      _isLoggingOut = false;
+    });
   }
 
   Future<void> login(String username, String password) async {
@@ -95,6 +124,7 @@ class ApiClient {
         'grant_type': 'refresh_token',
         'refresh_token': refreshToken,
         'client_id': dotenv.env["CLIENT_ID"],
+        'client_secret': dotenv.env["CLIENT_SECRET"],
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );

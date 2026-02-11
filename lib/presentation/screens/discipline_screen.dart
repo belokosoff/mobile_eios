@@ -7,6 +7,7 @@ import 'package:eios/data/repositories/timetable_repository.dart';
 import 'package:eios/presentation/screens/messages_screeen.dart';
 import 'package:eios/presentation/screens/rating_plan_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DisciplineListScreen extends StatefulWidget {
   const DisciplineListScreen({super.key});
@@ -19,14 +20,20 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
   final BrsRepository _brsRepository = BrsRepository();
   final TimetableRepository _timetableRepository = TimetableRepository();
 
+  static const _prefKeyYear = 'selected_year';
+  static const _prefKeyPeriod = 'selected_period';
+
+  static const _defaultYear = '2025 - 2026';
+  static const _defaultPeriod = 2;
+
   bool _isLoadingSemesters = true;
   bool _isLoadingDisciplines = false;
 
   List<StudentSemestr> _availableSemesters = [];
   List<RecordBook> _recordBooks = [];
 
-  String? _selectedYear = "2025 - 2026";
-  int? _selectedPeriod = 2;
+  String? _selectedYear;
+  int? _selectedPeriod;
 
   @override
   void initState() {
@@ -37,20 +44,67 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
   Future<void> _loadInitialData() async {
     try {
       final data = await _brsRepository.getStudentSemestr();
-      if (mounted && data.isNotEmpty) {
-        setState(() {
-          _availableSemesters = data;
-          _selectedYear = data.first.year;
-          _selectedPeriod = data.first.period;
-          _isLoadingSemesters = false;
-        });
-        _fetchDisciplines();
+      if (!mounted || data.isEmpty) {
+        setState(() => _isLoadingSemesters = false);
+        return;
       }
+
+      final prefs = await SharedPreferences.getInstance();
+      final savedYear = prefs.getString(_prefKeyYear);
+      final savedPeriod = prefs.getInt(_prefKeyPeriod);
+
+      final availableYears = data.map((e) => e.year).toSet().toList();
+
+      String? resolvedYear;
+      if (savedYear != null && availableYears.contains(savedYear)) {
+        resolvedYear = savedYear;
+      } else if (availableYears.contains(_defaultYear)) {
+        resolvedYear = _defaultYear;
+      } else {
+        resolvedYear = availableYears.first;
+      }
+
+      final availablePeriods = data
+          .where((e) => e.year == resolvedYear)
+          .map((e) => e.period)
+          .toList();
+
+      int? resolvedPeriod;
+      if (savedPeriod != null && availablePeriods.contains(savedPeriod)) {
+        resolvedPeriod = savedPeriod;
+      } else if (availablePeriods.contains(_defaultPeriod)) {
+        resolvedPeriod = _defaultPeriod;
+      } else {
+        resolvedPeriod = availablePeriods.isNotEmpty
+            ? availablePeriods.first
+            : null;
+      }
+
+      setState(() {
+        _availableSemesters = data;
+        _selectedYear = resolvedYear;
+        _selectedPeriod = resolvedPeriod;
+        _isLoadingSemesters = false;
+      });
+
+      await _saveSelection();
+
+      _fetchDisciplines();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingSemesters = false);
         _showError('Ошибка загрузки семестров: $e');
       }
+    }
+  }
+
+  Future<void> _saveSelection() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_selectedYear != null) {
+      await prefs.setString(_prefKeyYear, _selectedYear!);
+    }
+    if (_selectedPeriod != null) {
+      await prefs.setInt(_prefKeyPeriod, _selectedPeriod!);
     }
   }
 
@@ -76,7 +130,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
                   .toList(),
             );
           }).where((rb) => rb.disciplines?.isNotEmpty ?? false).toList() ?? [];
-          
+
           _isLoadingDisciplines = false;
         });
       }
@@ -213,12 +267,20 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
                   .map((y) => DropdownMenuItem(value: y, child: Text(y ?? "")))
                   .toList(),
               onChanged: (val) {
+                final newPeriods = _availableSemesters
+                    .where((e) => e.year == val)
+                    .map((e) => e.period)
+                    .toList();
+
                 setState(() {
                   _selectedYear = val;
-                  _selectedPeriod = _availableSemesters
-                      .firstWhere((e) => e.year == val)
-                      .period;
+                  if (!newPeriods.contains(_selectedPeriod)) {
+                    _selectedPeriod = newPeriods.isNotEmpty
+                        ? newPeriods.first
+                        : null;
+                  }
                 });
+                _saveSelection();
                 _fetchDisciplines();
               },
             ),
@@ -237,6 +299,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
                   .toList(),
               onChanged: (val) {
                 setState(() => _selectedPeriod = val);
+                _saveSelection();
                 _fetchDisciplines();
               },
             ),
@@ -248,7 +311,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
 
   Widget _buildDisciplineCard(Discipline discipline) {
     final hasMessages = (discipline.unreadedMessageCount ?? 0) > 0;
-    
+
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
@@ -287,7 +350,6 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Кнопка сообщений
             IconButton(
               icon: Badge(
                 isLabelVisible: hasMessages,
@@ -311,10 +373,9 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
     );
   }
 
-  /// Показать BottomSheet с выбором действия
   void _showDisciplineActions(Discipline discipline) {
     final hasMessages = (discipline.unreadedMessageCount ?? 0) > 0;
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -326,7 +387,6 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Заголовок
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
@@ -342,11 +402,10 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
               ),
               const SizedBox(height: 16),
               const Divider(height: 1),
-              
-              // Рейтинг-план
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  backgroundColor:
+                      Theme.of(context).primaryColor.withOpacity(0.1),
                   child: Icon(
                     Icons.assignment,
                     color: Theme.of(context).primaryColor,
@@ -360,28 +419,24 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
                   _openDisciplineDetails(discipline);
                 },
               ),
-              
-              // Форум / Сообщения
               ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Colors.blue.withOpacity(0.1),
                   child: Badge(
                     isLabelVisible: hasMessages,
-                    child: const Icon(
-                      Icons.forum,
-                      color: Colors.blue,
-                    ),
+                    child: const Icon(Icons.forum, color: Colors.blue),
                   ),
                 ),
                 title: const Text('Форум'),
                 subtitle: Text(
-                  hasMessages 
+                  hasMessages
                       ? 'Новых сообщений: ${discipline.unreadedMessageCount}'
                       : 'Обсуждение дисциплины',
                 ),
                 trailing: hasMessages
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(10),
@@ -401,7 +456,6 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
                   _openMessages(discipline);
                 },
               ),
-              
               const SizedBox(height: 8),
             ],
           ),
@@ -410,7 +464,6 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
     );
   }
 
-  /// Открыть экран сообщений
   void _openMessages(Discipline discipline) {
     final disciplineId = discipline.id;
     if (disciplineId == null) {
@@ -432,9 +485,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
   Future<void> _openDisciplineDetails(Discipline discipline) async {
     final disciplineId = discipline.id;
     if (disciplineId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ошибка: ID дисциплины не найден")),
-      );
+      _showError("Ошибка: ID дисциплины не найден");
       return;
     }
 
@@ -464,15 +515,11 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
     } on Exception catch (e) {
       if (mounted) {
         Navigator.pop(context);
-
         String errorMessage = "Не удалось загрузить план";
         if (e.toString().contains('TimeoutException')) {
           errorMessage = "Превышено время ожидания. Проверьте интернет.";
         }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$errorMessage: $e")),
-        );
+        _showError("$errorMessage: $e");
       }
     }
   }
