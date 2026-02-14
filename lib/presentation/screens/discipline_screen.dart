@@ -258,7 +258,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
         children: [
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: _selectedYear,
+              initialValue: _selectedYear,
               decoration: const InputDecoration(
                 labelText: 'Год',
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),
@@ -288,7 +288,7 @@ class _DisciplineListScreenState extends State<DisciplineListScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: DropdownButtonFormField<int>(
-              value: _selectedPeriod,
+              initialValue: _selectedPeriod,
               decoration: const InputDecoration(
                 labelText: 'Семестр',
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),

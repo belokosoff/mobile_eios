@@ -52,7 +52,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    // Показываем диалог подтверждения
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -152,12 +151,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    // Данные не загружены
     if (_profileData == null) {
       return const Center(child: Text('Нет данных'));
     }
 
-    // Отображение данных профиля
     return RefreshIndicator(
       onRefresh: _loadUserProfile,
       child: SingleChildScrollView(
@@ -167,12 +164,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // Аватар
             _buildAvatar(),
 
             const SizedBox(height: 20),
 
-            // ФИО
             Text(
               _profileData!.fio ?? "Имя не указано",
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -181,7 +176,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 8),
 
-            // Email
             if (_profileData!.email != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -198,12 +192,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
             const Divider(),
 
-            // Информация о пользователе
             _buildInfoSection(),
 
             const Divider(height: 32),
 
-            // Кнопка выхода
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(

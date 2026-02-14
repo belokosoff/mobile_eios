@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../data/storage/token_storage.dart';
 import '../../presentation/screens/login_screen.dart';
-import '../navigation/navigator_key.dart'; // <-- добавили
+import '../navigation/navigator_key.dart';
 import 'access_token.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -55,14 +55,21 @@ class ApiClient {
                 final response = await dio.fetch(options);
                 return handler.resolve(response);
               } catch (refreshError) {
-                log("LOG: Не удалось обновить токен: $refreshError");
                 await _forceLogout();
                 return handler.next(e);
               }
             } else {
-              log("LOG: Refresh token отсутствует");
+              log(
+                "LOG: No refresh token available for this flow. Logging out.",
+              );
               await _forceLogout();
-              return handler.next(e);
+              return handler.reject(
+                DioException(
+                  requestOptions: e.requestOptions,
+                  error: "Сессия истекла. Пожалуйста авторизируйте заново.",
+                  type: DioExceptionType.badResponse,
+                ),
+              );
             }
           }
           return handler.next(e);
@@ -89,10 +96,9 @@ class ApiClient {
     if (context != null) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false, // удаляем весь стек
+        (route) => false,
       );
     }
-
 
     Future.delayed(const Duration(seconds: 2), () {
       _isLoggingOut = false;

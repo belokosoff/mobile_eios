@@ -6,7 +6,6 @@ class TokenStorage {
   static const _accessKey = 'access_token';
   static const _refreshKey = 'refresh_token';
 
-  // Удобнее передавать объект целиком
   static Future<void> saveTokens(AccessToken tokens) async {
     await _storage.write(key: _accessKey, value: tokens.accessToken);
     await _storage.write(key: _refreshKey, value: tokens.refreshToken);
