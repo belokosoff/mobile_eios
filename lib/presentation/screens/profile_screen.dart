@@ -13,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final UserRepository _userRepository = UserRepository();
-  
+
   UserModel? _profileData;
   bool _isLoading = false;
   String? _errorMessage;
@@ -26,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfile() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -52,7 +52,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    // Показываем диалог подтверждения
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -76,14 +75,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await TokenStorage.logout();
       if (!mounted) return;
-      
+
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Ошибка выхода: $e'),
@@ -104,6 +103,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: _isLoading ? null : _loadUserProfile,
             tooltip: 'Обновить',
           ),
+          IconButton(
+            icon: const Icon(Icons.output_outlined),
+            onPressed: _logout,
+            tooltip: 'Выйти',
+          ),
         ],
       ),
       body: _buildBody(),
@@ -111,14 +115,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildBody() {
-    // Состояние загрузки
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // Состояние ошибки
     if (_errorMessage != null) {
       return Center(
         child: Padding(
@@ -126,11 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Ошибка загрузки профиля',
@@ -155,14 +151,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    // Данные не загружены
     if (_profileData == null) {
-      return const Center(
-        child: Text('Нет данных'),
-      );
+      return const Center(child: Text('Нет данных'));
     }
 
-    // Отображение данных профиля
     return RefreshIndicator(
       onRefresh: _loadUserProfile,
       child: SingleChildScrollView(
@@ -171,25 +163,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            
-            // Аватар
+
             _buildAvatar(),
-            
+
             const SizedBox(height: 20),
-            
-            // ФИО
+
             Text(
               _profileData!.fio ?? "Имя не указано",
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 8),
-            
-            // Email
+
             if (_profileData!.email != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -198,28 +184,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(width: 8),
                   Text(
                     _profileData!.email!,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ],
               ),
-            
+
             const SizedBox(height: 24),
             const Divider(),
-            
-            // Информация о пользователе
+
             _buildInfoSection(),
-            
+
             const Divider(height: 32),
-            
-            // Кнопка выхода
+
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
                 "Выйти из аккаунта",
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               onTap: _logout,
               shape: RoundedRectangleBorder(
@@ -234,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAvatar() {
     final photoUrl = _profileData?.photo?.urlMedium;
-    
+
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -246,15 +230,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: CircleAvatar(
         radius: 60,
         backgroundColor: Colors.grey[200],
-        backgroundImage: photoUrl != null
-            ? NetworkImage(photoUrl)
-            : null,
+        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
         child: photoUrl == null
-            ? Icon(
-                Icons.person,
-                size: 60,
-                color: Colors.grey[400],
-              )
+            ? Icon(Icons.person, size: 60, color: Colors.grey[400])
             : null,
       ),
     );
@@ -262,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildInfoSection() {
     final user = _profileData!;
-    
+
     return Column(
       children: [
         if (user.fio != null)
@@ -271,8 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Фамилия',
             value: user.fio!,
           ),
-        
-        
+
         if (user.birthDate != null)
           _buildInfoTile(
             icon: Icons.cake_outlined,
@@ -300,10 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(

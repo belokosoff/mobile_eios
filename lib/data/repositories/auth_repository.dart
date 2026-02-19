@@ -27,7 +27,6 @@ class AuthRepository {
       if (response.statusCode == 200 && response.data != null) {
         final tokens = AccessToken.fromJson(response.data);
         
-        // Сохраняем весь объект (access и refresh)
         await TokenStorage.saveTokens(tokens);
         
         log("LOG: Авторизация успешна");

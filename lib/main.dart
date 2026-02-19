@@ -5,6 +5,7 @@ import 'data/storage/token_storage.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/tabs_screen.dart';
 import 'core/network/api_service.dart';
+import 'core/navigation/navigator_key.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'EIOS App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
