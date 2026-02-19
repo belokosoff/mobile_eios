@@ -43,10 +43,14 @@ class ApiClient {
 
             if (refreshToken != null && refreshToken.isNotEmpty) {
               try {
-                log("LOG: Токен истёк, пытаюсь обновить...");
+                log(
+                  "LOG: Токен истёк, пытаюсь обновить через Refresh Token...",
+                );
+
                 final newTokens = await _refreshTokens(refreshToken);
+
                 await TokenStorage.saveTokens(newTokens);
-                log("LOG: Токен успешно обновлён");
+                log("LOG: Токены успешно обновлены");
 
                 final options = e.requestOptions;
                 options.headers['Authorization'] =
@@ -55,21 +59,14 @@ class ApiClient {
                 final response = await dio.fetch(options);
                 return handler.resolve(response);
               } catch (refreshError) {
+                log("LOG: Ошибка при попытке обновить токен: $refreshError");
                 await _forceLogout();
                 return handler.next(e);
               }
             } else {
-              log(
-                "LOG: No refresh token available for this flow. Logging out.",
-              );
+              log("LOG: Refresh token отсутствует в хранилище");
               await _forceLogout();
-              return handler.reject(
-                DioException(
-                  requestOptions: e.requestOptions,
-                  error: "Сессия истекла. Пожалуйста авторизируйте заново.",
-                  type: DioExceptionType.badResponse,
-                ),
-              );
+              return handler.next(e);
             }
           }
           return handler.next(e);
@@ -77,19 +74,36 @@ class ApiClient {
       ),
     );
 
-    dio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => debugPrint(obj.toString()),
-      ),
-    );
+    dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
+  }
+
+  Future<AccessToken> _refreshTokens(String refreshToken) async {
+    final refreshDio = Dio(BaseOptions(baseUrl: 'https://p.mrsu.ru/'));
+
+    try {
+      final response = await refreshDio.post(
+        'OAuth/Token',
+        data: {
+          'grant_type': 'refresh_token',
+          'refresh_token': refreshToken,
+          'client_id': dotenv.env["CLIENT_ID"],
+          'client_secret': dotenv.env["CLIENT_SECRET"],
+        },
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+
+      return AccessToken.fromJson(response.data);
+    } on DioException catch (e) {
+      log("LOG: Ошибка сервера при refresh_token: ${e.response?.statusCode}");
+      rethrow;
+    }
   }
 
   Future<void> _forceLogout() async {
     if (_isLoggingOut) return;
     _isLoggingOut = true;
 
+    log("LOG: Принудительный выход из системы");
     await TokenStorage.logout();
 
     final context = navigatorKey.currentContext;
@@ -100,41 +114,6 @@ class ApiClient {
       );
     }
 
-    Future.delayed(const Duration(seconds: 2), () {
-      _isLoggingOut = false;
-    });
-  }
-
-  Future<void> login(String username, String password) async {
-    final response = await dio.post(
-      '/OAuth/Token',
-      data: {
-        'username': username,
-        'password': password,
-        'grant_type': 'password',
-        'client_id': dotenv.env["CLIENT_ID"],
-        'client_secret': dotenv.env["CLIENT_SECRET"],
-      },
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
-
-    final tokens = AccessToken.fromJson(response.data);
-    await TokenStorage.saveTokens(tokens);
-  }
-
-  Future<AccessToken> _refreshTokens(String refreshToken) async {
-    final refreshDio = Dio();
-    final response = await refreshDio.post(
-      '$baseUrl/OAuth/Token',
-      data: {
-        'grant_type': 'refresh_token',
-        'refresh_token': refreshToken,
-        'client_id': dotenv.env["CLIENT_ID"],
-        'client_secret': dotenv.env["CLIENT_SECRET"],
-      },
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
-
-    return AccessToken.fromJson(response.data);
+    Future.delayed(const Duration(seconds: 3), () => _isLoggingOut = false);
   }
 }

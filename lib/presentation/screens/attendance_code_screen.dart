@@ -52,10 +52,8 @@ class _AttendanceCodeScreenState extends State<AttendanceCodeScreen>
     final isNowActive = _isActive;
 
     if (isNowActive && !wasActive) {
-      // Вернулись на вкладку - инициализируем камеру
       _initializeCamera();
     } else if (!isNowActive && wasActive) {
-      // Ушли с вкладки - освобождаем камеру
       _disposeCamera();
     }
   }
@@ -79,11 +77,9 @@ class _AttendanceCodeScreenState extends State<AttendanceCodeScreen>
     }
   }
 
-  /// Инициализация камеры с нуля
   Future<void> _initializeCamera() async {
     if (!mounted || _isCameraInitialized) return;
 
-    // Сначала освобождаем старый контроллер если есть
     await _disposeCamera();
 
     if (!mounted) return;
@@ -92,7 +88,7 @@ class _AttendanceCodeScreenState extends State<AttendanceCodeScreen>
       _scannerController = MobileScannerController(
         detectionSpeed: DetectionSpeed.normal,
         facing: CameraFacing.back,
-        autoStart: true, // Автоматически запускаем
+        autoStart: true,
       );
 
       _isCameraInitialized = true;
@@ -108,7 +104,6 @@ class _AttendanceCodeScreenState extends State<AttendanceCodeScreen>
     }
   }
 
-  /// Полное освобождение камеры
   Future<void> _disposeCamera() async {
     _isCameraInitialized = false;
 
