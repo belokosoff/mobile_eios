@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'data/storage/token_storage.dart';
-import 'presentation/screens/login_screen.dart';
+import 'presentation/screens/login/login_screen.dart';
 import 'presentation/screens/tabs_screen.dart';
 import 'core/network/api_service.dart';
 import 'core/navigation/navigator_key.dart';

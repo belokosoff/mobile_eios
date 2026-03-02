@@ -1,125 +1,107 @@
-import 'package:eios/data/storage/token_storage.dart';
-import 'package:eios/presentation/screens/login_screen.dart';
 import 'package:flutter/material.dart';
-import '../../data/models/user_model.dart';
-import '../../data/repositories/user_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:eios/presentation/screens/login/login_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+import 'bloc/profile_bloc.dart';
+import 'bloc/profile_event.dart';
+import 'bloc/profile_state.dart';
+
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ProfileBloc()..add(ProfileStarted()),
+      child: const _ProfileView(),
+    );
+  }
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final UserRepository _userRepository = UserRepository();
+class _ProfileView extends StatelessWidget {
+  const _ProfileView();
 
-  UserModel? _profileData;
-  bool _isLoading = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserProfile();
-  }
-
-  Future<void> _loadUserProfile() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final data = await _userRepository.getUserProfile();
-      if (mounted) {
-        setState(() {
-          _profileData = data;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _profileData = null;
-          _isLoading = false;
-          _errorMessage = e.toString();
-        });
-      }
-    }
-  }
-
-  Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Выход'),
         content: const Text('Вы уверены, что хотите выйти?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('Отмена'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              context.read<ProfileBloc>().add(ProfileLogoutRequested());
+            },
             child: const Text('Выйти', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-
-    if (confirm != true || !mounted) return;
-
-    try {
-      await TokenStorage.logout();
-      if (!mounted) return;
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ошибка выхода: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Профиль"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadUserProfile,
-            tooltip: 'Обновить',
-          ),
-          IconButton(
-            icon: const Icon(Icons.output_outlined),
-            onPressed: _logout,
-            tooltip: 'Выйти',
-          ),
-        ],
+    return BlocListener<ProfileBloc, ProfileState>(
+      listenWhen: (prev, curr) =>
+          curr.logoutSuccess ||
+          (curr.errorMessage != prev.errorMessage && curr.errorMessage != null),
+      listener: (context, state) {
+        if (state.logoutSuccess) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+          return;
+        }
+
+        if (state.errorMessage != null && state.isLoaded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Профиль"),
+          actions: [
+            BlocBuilder<ProfileBloc, ProfileState>(
+              buildWhen: (prev, curr) => prev.isLoading != curr.isLoading,
+              builder: (context, state) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: state.isLoading
+                    ? null
+                    : () => context.read<ProfileBloc>().add(ProfileRefreshed()),
+                tooltip: 'Обновить',
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.output_outlined),
+              onPressed: () => _showLogoutDialog(context),
+              tooltip: 'Выйти',
+            ),
+          ],
+        ),
+        body: BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) => _buildBody(context, state),
+        ),
       ),
-      body: _buildBody(),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget _buildBody(BuildContext context, ProfileState state) {
+    if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_errorMessage != null) {
+    if (state.isError) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -135,13 +117,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _errorMessage!,
+                state.errorMessage ?? '',
                 style: const TextStyle(color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loadUserProfile,
+                onPressed: () =>
+                    context.read<ProfileBloc>().add(ProfileStarted()),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Повторить'),
               ),
@@ -151,51 +134,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    if (_profileData == null) {
+    final user = state.user;
+    if (user == null) {
       return const Center(child: Text('Нет данных'));
     }
 
     return RefreshIndicator(
-      onRefresh: _loadUserProfile,
+      onRefresh: () async {
+        context.read<ProfileBloc>().add(ProfileRefreshed());
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             const SizedBox(height: 20),
-
-            _buildAvatar(),
-
+            _buildAvatar(context, user.photo?.urlMedium),
             const SizedBox(height: 20),
-
             Text(
-              _profileData!.fio ?? "Имя не указано",
+              user.fio ?? "Имя не указано",
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 8),
-
-            if (_profileData!.email != null)
+            if (user.email != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.email, size: 16, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    _profileData!.email!,
+                    user.email!,
                     style: const TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ],
               ),
-
             const SizedBox(height: 24),
             const Divider(),
-
-            _buildInfoSection(),
-
+            _buildInfoSection(user),
             const Divider(height: 32),
-
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
@@ -205,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              onTap: _logout,
+              onTap: () => _showLogoutDialog(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -216,9 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAvatar() {
-    final photoUrl = _profileData?.photo?.urlMedium;
-
+  Widget _buildAvatar(BuildContext context, String? photoUrl) {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -238,9 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildInfoSection() {
-    final user = _profileData!;
-
+  Widget _buildInfoSection(dynamic user) {
     return Column(
       children: [
         if (user.fio != null)
@@ -249,7 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Фамилия',
             value: user.fio!,
           ),
-
         if (user.birthDate != null)
           _buildInfoTile(
             icon: Icons.cake_outlined,

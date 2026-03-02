@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:eios/presentation/screens/attendance_code_screen.dart';
-import 'package:eios/presentation/screens/discipline_screen.dart';
-import 'package:eios/presentation/screens/timetable_screen.dart';
-import 'profile_screen.dart';
+import 'package:eios/presentation/screens/attendance_code/attendance_code_screen.dart';
+import 'package:eios/presentation/screens/discipline/discipline_screen.dart';
+import 'package:eios/presentation/screens/timetable/timetable_screen.dart';
+import 'profile/profile_screen.dart';
 
 class TabsScreen extends StatefulWidget {
   const TabsScreen({super.key});
@@ -47,7 +47,7 @@ class _TabsScreenState extends State<TabsScreen> {
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
-      _loadPage(index); // Инициализируем страницу при переходе
+      _loadPage(index);
     });
   }
 
@@ -56,8 +56,6 @@ class _TabsScreenState extends State<TabsScreen> {
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      // Используем IndexedStack, но заполняем его заглушками,
-      // пока реальная страница не будет выбрана пользователем
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(4, (index) {

@@ -2,7 +2,7 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../data/storage/token_storage.dart';
-import '../../presentation/screens/login_screen.dart';
+import '../../presentation/screens/login/login_screen.dart';
 import '../navigation/navigator_key.dart';
 import 'access_token.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
