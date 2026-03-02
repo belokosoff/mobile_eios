@@ -143,11 +143,9 @@ class RatingPlanScreen extends StatelessWidget {
   }
 
   Widget _buildSection(BuildContext context, RatingPlanSection section) {
-    // Проверяем наличие контрольных точек в разделе
     final hasControlDots =
         section.controlDots != null && section.controlDots!.isNotEmpty;
 
-    // Считаем общий балл и максимальный балл для раздела
     double totalScore = 0;
     double maxScore = 0;
 
