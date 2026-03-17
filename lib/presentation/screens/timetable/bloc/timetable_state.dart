@@ -21,7 +21,7 @@ class TimetableState {
     this.timetableData,
     required this.selectedDay,
     required this.focusedDay,
-    this.calendarFormat = CalendarFormat.month,
+    this.calendarFormat = CalendarFormat.twoWeeks,
     this.isLoadingRatingPlan = false,
     this.snackBarMessage,
     this.ratingPlanToNavigate,

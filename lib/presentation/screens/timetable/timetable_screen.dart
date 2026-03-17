@@ -53,22 +53,24 @@ class _TimetableView extends StatelessWidget {
     '19:50-21:20',
   ];
 
-  List<Map<String, dynamic>> _getFormattedLessons(TimetableState state) {
-    final lessonsList = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>?> _getFormattedLessons(TimetableState state) {
+    final lessonsList = List<Map<String, dynamic>?>.filled(8, null);
     if (state.timetableData == null) return lessonsList;
 
     for (var groupData in state.timetableData!) {
       final lessons = groupData.timeTable?.lessons ?? [];
       for (var lesson in lessons) {
         final lessonNumber = lesson.number;
-        for (var discipline in lesson.disciplines ?? []) {
-          lessonsList.add({'number': lessonNumber, 'discipline': discipline});
+        if (lessonNumber != null && lessonNumber > 0 && lessonNumber <= 8) {
+          for (var discipline in lesson.disciplines ?? []) {
+            lessonsList[lessonNumber - 1] = {
+              'number': lessonNumber,
+              'discipline': discipline,
+            };
+          }
         }
       }
     }
-    lessonsList.sort(
-      (a, b) => (a['number'] as int).compareTo(b['number'] as int),
-    );
     return lessonsList;
   }
 
@@ -131,11 +133,18 @@ class _TimetableView extends StatelessWidget {
               children: [
                 // ── Календарь ──
                 TableCalendar(
+                  key: ValueKey(state.calendarFormat),
                   locale: 'ru_RU',
                   firstDay: kFirstDay,
                   lastDay: kLastDay,
                   focusedDay: state.focusedDay,
                   calendarFormat: state.calendarFormat,
+                  availableCalendarFormats: const {
+                    CalendarFormat.twoWeeks: '2 недели',
+                    CalendarFormat.week: 'Неделя',
+                    CalendarFormat.month: 'Месяц',
+                  },
+                  headerStyle: const HeaderStyle(formatButtonShowsNext: false),
                   startingDayOfWeek: StartingDayOfWeek.monday,
                   selectedDayPredicate: (day) =>
                       isSameDay(state.selectedDay, day),
@@ -195,7 +204,15 @@ class _TimetableView extends StatelessWidget {
                             itemCount: lessonItems.length,
                             itemBuilder: (context, index) {
                               final item = lessonItems[index];
-                              final int number = item['number'];
+                              final int number = index + 1;
+
+                              if (item == null) {
+                                return _EmptyLessonSlot(
+                                  number: number,
+                                  periodLesson: _periodLesson,
+                                );
+                              }
+
                               final d =
                                   item['discipline']
                                       as TimeTableLessonDiscipline;
@@ -221,7 +238,6 @@ class _TimetableView extends StatelessWidget {
     );
   }
 }
-
 
 class _LessonCard extends StatelessWidget {
   final int number;
@@ -326,6 +342,55 @@ class _LessonCard extends StatelessWidget {
                   ),
                 )
               : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyLessonSlot extends StatelessWidget {
+  final int number;
+  final List<String> periodLesson;
+
+  const _EmptyLessonSlot({required this.number, required this.periodLesson});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      color: Colors.grey.shade100,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.shade400,
+          child: Text(
+            "$number",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        title: const Text(
+          'Нет занятия',
+          style: TextStyle(color: Colors.grey, fontSize: 14),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.watch_later_outlined,
+                size: 16,
+                color: Colors.grey,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                periodLesson[number - 1],
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );

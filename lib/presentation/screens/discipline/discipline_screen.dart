@@ -133,53 +133,79 @@ class _Selectors extends StatelessWidget {
 
         return Container(
           color: Theme.of(context).scaffoldBackgroundColor,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: state.selectedYear,
-                  decoration: const InputDecoration(
-                    labelText: 'Год',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  items: years
-                      .map(
-                        (y) => DropdownMenuItem(value: y, child: Text(y ?? "")),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      context.read<DisciplineListBloc>().add(
-                        DisciplineListYearChanged(val),
-                      );
-                    }
-                  },
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: state.selectedYear,
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                      items: years
+                          .map(
+                            (y) => DropdownMenuItem(
+                              value: y,
+                              child: Text(
+                                y?.replaceAll('-', '/') ?? "",
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          context.read<DisciplineListBloc>().add(
+                            DisciplineListYearChanged(val),
+                          );
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: state.selectedPeriod,
-                  decoration: const InputDecoration(
-                    labelText: 'Семестр',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  items: periods
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(p.toString()),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      context.read<DisciplineListBloc>().add(
-                        DisciplineListPeriodChanged(val),
-                      );
-                    }
-                  },
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: state.selectedPeriod,
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                      items: periods
+                          .whereType<int>()
+                          .map(
+                            (p) => DropdownMenuItem(
+                              value: p,
+                              child: Text(
+                                '$p семестр',
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          context.read<DisciplineListBloc>().add(
+                            DisciplineListPeriodChanged(val),
+                          );
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ),
             ],

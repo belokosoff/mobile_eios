@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eios/data/repositories/timetable_repository.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import 'timetable_event.dart';
 import 'timetable_state.dart';
@@ -10,7 +11,11 @@ class TimetableBloc extends Bloc<TimetableEvent, TimetableState> {
   TimetableBloc({TimetableRepository? repository})
     : _repository = repository ?? TimetableRepository(),
       super(
-        TimetableState(selectedDay: DateTime.now(), focusedDay: DateTime.now()),
+        TimetableState(
+          selectedDay: DateTime.now(),
+          focusedDay: DateTime.now(),
+          calendarFormat: CalendarFormat.twoWeeks,
+        ),
       ) {
     on<TimetableStarted>(_onStarted);
     on<TimetableDateSelected>(_onDateSelected);

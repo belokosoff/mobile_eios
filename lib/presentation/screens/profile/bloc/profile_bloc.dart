@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eios/data/repositories/user_repository.dart';
+import 'package:eios/data/storage/cache_service.dart';
 import 'package:eios/data/storage/token_storage.dart';
 
 import 'profile_event.dart';
@@ -54,6 +55,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     try {
       await TokenStorage.logout();
+      final cache = await CacheService.getInstance();
+      await cache.clearAll();
       emit(state.copyWith(logoutSuccess: true));
     } catch (e) {
       emit(state.copyWith(errorMessage: 'Ошибка выхода: $e'));
